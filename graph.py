@@ -6,6 +6,15 @@ import numpy as np
 from typing import List
 
 
+def smart_np_multiply(A: np.ndarray, B: np.ndarray):
+    """If both A and B are numpy matrices, use matrix multiplication
+    Otherwise, use scalar multiplication"""
+    if np.isscalar(A) or np.isscalar(B):
+        return A * B
+    else:
+        return A @ B
+    
+
 class Node:
     def __init__(self, val: np.ndarray, parents: List=None):
         self.val = val
@@ -19,11 +28,13 @@ class Node:
             if isinstance(local_grad, str) and local_grad == 'transpose':
                 parent.backward(upstream_grad.T)
             else:
-                if hasattr(upstream_grad, '__len__') and hasattr(local_grad, '__len__'):    # if both are matrices
-                    parent.backward(upstream_grad @ local_grad)
-                    # parent.backward(local_grad @ upstream_grad)
-                else:   # If one is scalar, use ordinary multiplication
-                    parent.backward(upstream_grad * local_grad)     
+                # if hasattr(upstream_grad, '__len__') and hasattr(local_grad, '__len__'):    # if both are matrices
+                #     parent.backward(upstream_grad @ local_grad)
+                #     # parent.backward(local_grad @ upstream_grad)
+                # else:   # If one is scalar, use ordinary multiplication
+                #     parent.backward(upstream_grad * local_grad)
+                parent.backward(smart_np_multiply(upstream_grad, local_grad))
+
 
     def __repr__(self):
         print(f"Node {self.val}")
@@ -34,6 +45,15 @@ class Multiply(Node):
         val = x.val @ y.val
         parents = [(x, y.val.T), (y, x.val.T)]    # Note the trans here
         super().__init__(val, parents)
+
+    def backward(self, upstream_grad: np.ndarray=1):
+        """Override base class method:
+        The 1st and 2nd parent has to be dealt with differently!!!"""
+        self._grad += upstream_grad
+        p1, g1 = self.parents[0]
+        p2, g2 = self.parents[1]
+        p1.backward(smart_np_multiply(upstream_grad, g1))
+        p2.backward(smart_np_multiply(g2, upstream_grad))
 
 
 class Transpose(Node):
@@ -100,7 +120,6 @@ def test1():
     print(f"plpa: autograd is: ")
     print(A_node._grad)
 
-
 def test2():
     X = np.arange(1,7).reshape(6,1)
     Y = np.ones((6,1))
@@ -130,14 +149,9 @@ def test2():
     print(f"plpy: autograd is: ")
     print(Y_node._grad)
 
-
-
 def main():
-    test1()
-    # test2()
-
-
-
+    # test1()
+    test2()
 
 if __name__ == "__main__":
     main()
