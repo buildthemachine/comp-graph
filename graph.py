@@ -1,6 +1,6 @@
 """Proof-of-concept: Defining the computation graph for autograd applications
 Use numpy.ndarrays as the underlying data structure. 
-Build my own computation graphs for backprop"""
+Build my own computation graphs for automatic backprop"""
 
 import numpy as np
 from typing import List
@@ -22,19 +22,14 @@ class Node:
         self.parents = parents if parents is not None else []
 
     def backward(self, upstream_grad: np.ndarray=1):
-        """backward() is a DFS search algo"""
+        """backward() is a DFS search algo
+        This is the base class backward definition: may need to override"""
         self._grad += upstream_grad     # visit this node
         for parent, local_grad in self.parents:     # DFS
             if isinstance(local_grad, str) and local_grad == 'transpose':
                 parent.backward(upstream_grad.T)
             else:
-                # if hasattr(upstream_grad, '__len__') and hasattr(local_grad, '__len__'):    # if both are matrices
-                #     parent.backward(upstream_grad @ local_grad)
-                #     # parent.backward(local_grad @ upstream_grad)
-                # else:   # If one is scalar, use ordinary multiplication
-                #     parent.backward(upstream_grad * local_grad)
                 parent.backward(smart_np_multiply(upstream_grad, local_grad))
-
 
     def __repr__(self):
         print(f"Node {self.val}")
@@ -72,8 +67,31 @@ class ReLU(Node):
         parents = [(x, mask)]
         super().__init__(val, parents)
 
+    def backward(self, upstream_grad: np.ndarray):
+        """Override base class backward function"""
+        self._grad += upstream_grad
+        assert(len(self.parents) == 1)  # should only have one parent
+        for parent, local_grad in self.parents:
+            parent.backward(upstream_grad * local_grad)
+
+
+class Sigmoid(Node):
+    def __init__(self, x: Node):
+        x_val = x.val
+        val = np.exp(x_val) / (1+np.exp(x_val))
+        parents = [(x, val*(1-val))]
+        super().__init__(val, parents)
+
+    def backward(self, upstream_grad: np.ndarray):
+        """Override base class backward function"""
+        self._grad += upstream_grad
+        assert(len(self.parents) == 1)  # should only have one parent
+        for parent, local_grad in self.parents:
+            parent.backward(upstream_grad * local_grad)
+            
 
 class Add(Node):
+    """May use backward function from base"""
     def __init__(self, x: Node, y: Node):
         val = x.val + y.val
         parents = [(x, 1), (y, 1)]
