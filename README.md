@@ -9,7 +9,20 @@ This repository contains Python POC implementations of autograd with a computati
 A good reference for backpro is CS231 lecture notes in Apr 2018. However even in there, the matrix formulation of many operations are not derived in sufficient details. Here I've included a few details that I found useful in the implementation. 
 - Note here that Einstein summation convention is used, where $C_{ij}=A_{ik}B_{kj}$ implies $\sum_kA_{ik}B_{kj}$. 
 
-### Multiplication
+### Reduction operators
+
+Reduction operators reduces a multi-dimensional tensor to a lower dimension. In particular, it may reduce a vector into a scalar. 
+
+#### Summation and Mean
+Assume $x$ is n-dimensional column vector, and the upstream gradient for $\sum x_i$ is a scalar. The local gradient of the summation operator is: 
+$$\frac{\partial \sum x_i}{\partial x_i}=[0,\cdots, 0, 1, 0, \cdots]^\top$$
+
+while the location gradient for the mean operator is: 
+$$\frac{\partial \bar{x}}{\partial x_i}=\frac{1}{N}[0,\cdots, 0, 1, 0, \cdots]^\top$$
+
+
+### Binary operators
+#### Multiplication
 
 Assume $A$ and $B$ are matrices and the final loss function is: 
 
