@@ -42,3 +42,8 @@ $$\Big(\frac{\partial L}{\partial B}\Big)_{kj}=\Big(\frac{\partial L}{\partial C
 
 **It is important to note that the partial derivative with respect ot $A$ and $B$ are different. With respect to $A$, the upstream gradient $\partial L/\partial C$ should go first with the transposed local gradient $\big(\partial L/\partial B\big)^\top $ go second. On the other hand, with respect to $B$, the transposed local gradient $\big(\partial L/\partial A\big)^\top$ should go first, while the upstream graident $\partial L/\partial C$ second.**
 
+
+## Notes to the code:
+1. Leaf nodes in the computational graph has default `requires_grad` set to False. There are two ways to set the leaf node gradient tracking to True: 
+    - In `__init__`, pass in a `requries_grad` param set to True;
+    - Calling *compute_node.requries_grad_()* to force gradient tracking for this particular node. 
