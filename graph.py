@@ -33,6 +33,7 @@ class NodeBase:
         return self._grad
 
     def requires_grad_(self, requires_grad: bool=True):
+        """Return self: common use when method chaining is needed"""
         self.requires_grad = requires_grad
         self._grad = 0
         return self
