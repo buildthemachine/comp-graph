@@ -37,12 +37,19 @@ class NodeBase:
         self.requires_grad = requires_grad
         self._grad = 0
         return self
+    
+    def zero_grad_(self):
+        if self.requires_grad:
+            self._grad = 0
+        else:
+            raise ValueError("You need to set requries_grad to True first!")
+        return self
 
 
 class NodeLeaf(NodeBase):
-    def __init__(self, val: np.ndarray):
+    def __init__(self, val: np.ndarray, parents: List=None, requires_grad: bool=False):
         # parents = None given leaf nodes (here paradoxically children is referred to as parents)
-        super().__init__(val, None)
+        super().__init__(val, parents, requires_grad)
 
     def backward(self, upstream_grad: np.ndarray=1):
         if self.requires_grad:
@@ -72,7 +79,8 @@ class NodeUnary(NodeBase):
 
 class NodeBinary(NodeBase):
     """Base class for a binary operator
-    Binary operators involves two inputs. Examples include: multiply, addition, etc."""
+    Binary operators involves two inputs. Examples include: multiply, addition, etc.
+    Not a leaf node: requires_grad set to True iff. both parent nodes are True"""
     def __init__(self, val: np.ndarray, parents: List=None):
         assert len(parents) == 2, "Binary operator has # of parents other than 2!"
         requires_grad = parents[0][0].requires_grad and parents[1][0].requires_grad

@@ -7,7 +7,8 @@ Date:       12/25/2024
 import logging
 import numpy as np
 import torch
-from graph import NodeLeaf, Multiply, Transpose, Mean1D, Power
+import torch.nn.functional as F
+from graph import NodeLeaf, Multiply, Transpose, Mean1D, Power, Sigmoid, ReLU
 import unittest
 
 logger = logging.getLogger(__name__)
@@ -48,7 +49,7 @@ class TestMean1D(unittest.TestCase):
     """
     def setUp(self):
         X = np.arange(1,7).reshape(6,1).astype(float)
-        # A = np.identity(6).astype(float)
+        np.random.seed(42)
         A = np.random.randn(6,6).astype(float)
         self.X_tensor = torch.from_numpy(X).requires_grad_()
         self.A_tensor = torch.from_numpy(A).requires_grad_()
@@ -86,6 +87,44 @@ class TestPower(unittest.TestCase):
 
     def test_equal(self):
         self.assertAlmostEqual(self.loss_node.val, self.loss_torch.detach().item())
+        X_diff = np.fabs(self.X_node.get_grad() - self.X_tensor.grad.detach().numpy())
+        self.assertAlmostEqual(np.sum(X_diff), 0)
+
+
+class TestUnary(unittest.TestCase):
+    def setUp(self):
+        X = np.arange(1,7).reshape(6,1).astype(float)
+        np.random.seed(42)
+        A = np.random.randn(6,6).astype(float)
+
+        # torch implementations
+        self.X_tensor = torch.from_numpy(X).requires_grad_()
+        self.A_tensor = torch.from_numpy(A).requires_grad_()
+
+        # comp-graph implementations
+        self.X_node = NodeLeaf(X).requires_grad_()
+        self.A_node = NodeLeaf(A).requires_grad_()
+        
+    def test_relu(self):
+        loss_tensor = torch.mean(self.X_tensor.t() @ F.relu(self.A_tensor))
+        loss_tensor.backward()
+        loss_node = Multiply(Transpose(self.X_node), ReLU(self.A_node))
+        loss_node = Mean1D(loss_node)
+        loss_node.backward()
+
+        self.assertAlmostEqual(loss_node.val, loss_tensor.detach().item())
+        X_diff = np.fabs(self.X_node.get_grad() - self.X_tensor.grad.detach().numpy())
+        self.assertAlmostEqual(np.sum(X_diff), 0)
+
+    def test_sigmoid(self):
+        self.X_node.zero_grad_()
+        loss_tensor = torch.mean(self.X_tensor.t() @ F.sigmoid(self.A_tensor))
+        loss_tensor.backward()
+        loss_node = Multiply(Transpose(self.X_node), Sigmoid(self.A_node))
+        loss_node = Mean1D(loss_node)
+        loss_node.backward()
+
+        self.assertAlmostEqual(loss_node.val, loss_tensor.detach().item())
         X_diff = np.fabs(self.X_node.get_grad() - self.X_tensor.grad.detach().numpy())
         self.assertAlmostEqual(np.sum(X_diff), 0)
 
