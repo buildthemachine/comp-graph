@@ -3,6 +3,7 @@
 This repository contains Python POC implementations of autograd with a computational graph. The key ideas are: 
 - Tensors implementated as numpy arrays
 - Node dependencies implemented as directed acyclic graphs (DAG), where each node is visited via depth first search to keep its topological ordering
+- For each scalar/matrix/tensor operation, a new node is introduced into the computational graph. The each node in the graph tracks: 1). its parent nodes (from a forward pass POV), 2) the accumulated gradient from the loss node back to the current node
 
 ## Backpropagation math
 
